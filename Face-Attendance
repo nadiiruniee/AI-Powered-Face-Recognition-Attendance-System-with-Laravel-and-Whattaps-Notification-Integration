@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Face Attendance with WhatsApp</title>
+    <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+    <style>
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #f0f2f5; }
+        .container { position: relative; background: white; padding: 20px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center; }
+        video { border-radius: 10px; width: 640px; height: 480px; background: #222; }
+        #status { margin-top: 15px; font-weight: bold; padding: 15px; border-radius: 8px; background: #eee; color: #333; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Face Attendance System</h1>
+        <video id="video" autoplay muted playsinline></video>
+        <div id="status">Loading AI Models...</div>
+    </div>
+
+    <script>
+        const video = document.getElementById('video');
+        const status = document.getElementById('status');
+        let canSendWA = true; 
+
+        async function loadModels() {
+            const MODEL_URL = 'https://justadudewhohacks.github.io/face-api.js/models';
+            try {
+                await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+                status.innerText = "Models Loaded! Starting Camera...";
+                startCamera();
+            } catch (e) {
+                status.innerText = "Check Internet & Refresh";
+            }
+        }
+
+        async function startCamera() {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            video.srcObject = stream;
+            detectFace();
+        }
+
+        async function detectFace() {
+            setInterval(async () => {
+                const detections = await faceapi.detectAllFaces(video, new faceapi.TinyFaceDetectorOptions());
+                
+                if(detections.length > 0) {
+                    status.innerText = "FACE DETECTED ✅";
+                    status.style.backgroundColor = "#28a745";
+                    status.style.color = "white";
+
+                    if (canSendWA) {
+                        sendWhatsApp();
+                        canSendWA = false; 
+                        // Jeda 1 menit agar tidak spam
+                        setTimeout(() => { canSendWA = true; }, 60000); 
+                    }
+                } else {
+                    status.innerText = "NO FACE DETECTED ❌";
+                    status.style.backgroundColor = "#dc3545";
+                    status.style.color = "white";
+                }
+            }, 500);
+        }
+
+        function sendWhatsApp() {
+            // GANTI DENGAN DATA DARI FONNTE
+            const token = 'YOUR-TOKEN'; 
+            const target = '08xxxxxxxxx'; 
+
+            const formData = new FormData();
+            formData.append('target', target);
+            formData.append('message', 'Notifikasi: Wajah terdeteksi di sistem absensi pada jam ' + new Date().toLocaleTimeString());
+
+            fetch('https://api.fonnte.com/send', {
+                method: 'POST',
+                headers: { 'Authorization': token },
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => console.log('WA Sent Success:', data))
+            .catch(err => console.error('WA Error:', err));
+        }
+
+        loadModels();
+    </script>
+</body>
+</html>
